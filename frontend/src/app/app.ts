@@ -8,7 +8,7 @@ import { AuthService } from './core/auth.service';
   styleUrl: './app.scss',
   template: `
     <header>
-      <h1>Personal Finances</h1>
+      <h1>Personal Finances Test deploy</h1>
       @if (auth.user(); as user) {
         <span class="who">{{ user.displayName ?? user.email }}</span>
         <button (click)="auth.signOut()">Sign out</button>
