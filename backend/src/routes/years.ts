@@ -23,9 +23,12 @@ export const years = new Hono<AppEnv>()
 
   // ----- years -----
   .get('/:y', async (c) => {
-    const data = await r(c).getYear(yearParam(c.req.param('y')));
+    const y = yearParam(c.req.param('y'));
+    const repo_ = r(c);
+    const [data, prev] = await Promise.all([repo_.getYear(y), repo_.getYearDoc(y - 1)]);
     if (!data) throw notFound('Year');
-    return c.json(data);
+    // Last year's December count lets January's monthly count compute its untraced correction.
+    return c.json({ ...data, prevDecember: prev?.counts['12'] ?? null });
   })
   .post('/', async (c) => {
     const b = await body(c);

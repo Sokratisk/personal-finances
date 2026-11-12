@@ -43,6 +43,8 @@ export interface Entry {
 export interface YearData {
   year: YearDoc;
   months: Record<number, Entry[]>;
+  /** Previous year's December count (for January's untraced suggestion). */
+  prevDecember?: Count | null;
 }
 
 export interface Account {

@@ -20,26 +20,27 @@ import type { Entry } from '../core/models';
   imports: [FormsModule, HlmButtonImports, HlmFieldImports, HlmInputImports, HlmLabelImports, HlmNativeSelectImports],
   template: `
     <form #f="ngForm" (ngSubmit)="save()" class="grid gap-3">
-      <div class="grid grid-cols-2 gap-3">
-        <div hlmField>
-          <label hlmLabel for="ee-amount">Amount (€)</label>
-          <input hlmInput id="ee-amount" name="amount" type="number" inputmode="decimal" step="0.01" required
-                 [(ngModel)]="amount" placeholder="0.00" autocomplete="off" />
-        </div>
-        <div hlmField>
-          <label hlmLabel for="ee-month">Month</label>
-          <hlm-native-select selectId="ee-month" name="month" [(ngModel)]="month">
-            @for (name of monthNames; track $index) {
-              <option hlmNativeSelectOption [ngValue]="$index + 1">{{ name }}</option>
-            }
-          </hlm-native-select>
-        </div>
+      <!-- Order: month → amount → category (month first so the phone keyboard doesn't pop up on open) -->
+      <div hlmField>
+        <label hlmLabel for="ee-month">Month</label>
+        <hlm-native-select selectId="ee-month" name="month" class="w-full" [ngModel]="'' + month()" (ngModelChange)="month.set(+$event)">
+          @for (name of monthNames; track $index) {
+            <option hlmNativeSelectOption [value]="'' + ($index + 1)">{{ name }}</option>
+          }
+        </hlm-native-select>
+      </div>
+
+      <div hlmField>
+        <label hlmLabel for="ee-amount">Amount (€)</label>
+        <input hlmInput #amountInput id="ee-amount" name="amount" type="text" inputmode="decimal" required
+               pattern="-?[0-9]+([.][0-9]{1,2})?" [ngModel]="amount()" (ngModelChange)="setAmount($event, amountInput)"
+               placeholder="0.00" autocomplete="off" />
       </div>
 
       @if (!categoryId()) {
         <div hlmField>
           <label hlmLabel for="ee-cat">Category</label>
-          <hlm-native-select selectId="ee-cat" name="category" required [(ngModel)]="pickedCategory">
+          <hlm-native-select selectId="ee-cat" name="category" class="w-full" required [(ngModel)]="pickedCategory">
             <option hlmNativeSelectOption value="" disabled>Choose…</option>
             @for (k of kinds; track k.kind) {
               <optgroup hlmNativeSelectOptGroup [label]="k.label">
@@ -55,7 +56,7 @@ import type { Entry } from '../core/models';
       @if (itemsForCategory().length) {
         <div hlmField>
           <label hlmLabel for="ee-item">Item</label>
-          <hlm-native-select selectId="ee-item" name="item" [(ngModel)]="itemId">
+          <hlm-native-select selectId="ee-item" name="item" class="w-full" [(ngModel)]="itemId">
             <option hlmNativeSelectOption value="">— none —</option>
             @for (i of itemsForCategory(); track i.id) {
               <option hlmNativeSelectOption [value]="i.id">{{ i.name }}</option>
@@ -102,10 +103,11 @@ export class EntryEditor {
   ] as const;
   protected readonly saving = signal(false);
 
-  protected amount: number | null = null;
-  protected month = 1;
-  protected note = '';
-  protected itemId = '';
+  // Signals (not plain fields): they're filled from effects, and only signal writes re-render in zoneless Angular.
+  protected readonly amount = signal('');
+  protected readonly month = signal(new Date().getMonth() + 1);
+  protected readonly note = signal('');
+  protected readonly itemId = signal('');
   protected readonly pickedCategory = signal('');
 
   private readonly category = computed(() => this.categoryId() ?? this.pickedCategory());
@@ -115,19 +117,31 @@ export class EntryEditor {
     // (Re)fill the form when the edited entry or month changes.
     effect(() => {
       const e = this.entry();
-      this.month = this.initialMonth();
-      this.amount = e?.amount ?? null;
-      this.note = e?.note ?? '';
-      this.itemId = e?.itemId ?? this.initialItemId() ?? '';
+      this.month.set(this.initialMonth());
+      this.amount.set(e ? String(e.amount) : '');
+      this.note.set(e?.note ?? '');
+      this.itemId.set(e?.itemId ?? this.initialItemId() ?? '');
     });
 
     // Adding to a category that has an item in this month (an ongoing trip)? Preselect the newest one.
     effect(() => {
       const items = this.itemsForCategory();
       if (this.entry() || this.initialItemId()) return;
-      const month = untracked(() => this.month);
-      this.itemId = [...items].reverse().find((i) => i.month === month)?.id ?? '';
+      const month = untracked(() => this.month());
+      this.itemId.set([...items].reverse().find((i) => i.month === month)?.id ?? '');
     });
+  }
+
+  /** Keep only a number: digits, one "." (a "," is turned into "."), max 2 decimals, optional leading "-" (refunds). */
+  protected setAmount(raw: string, el: HTMLInputElement) {
+    let v = (raw ?? '').replace(',', '.').replace(/[^0-9.-]/g, '');
+    const negative = v.startsWith('-');
+    v = v.replace(/-/g, '');
+    const [int, ...rest] = v.split('.');
+    v = rest.length ? `${int}.${rest.join('').slice(0, 2)}` : int!;
+    if (negative) v = '-' + v;
+    this.amount.set(v);
+    if (el.value !== v) el.value = v; // reflect the cleaned value immediately
   }
 
   protected categoriesOf(kind: string) {
@@ -136,24 +150,25 @@ export class EntryEditor {
 
   protected async save() {
     const categoryId = this.category();
-    if (!categoryId || this.amount === null || !Number(this.amount)) return;
+    const amount = Number(this.amount());
+    if (!categoryId || !Number.isFinite(amount) || !amount) return;
     this.saving.set(true);
     try {
       const y = this.store.y;
       const e = this.entry();
-      const body = { categoryId, amount: Number(this.amount), note: this.note.trim() || undefined };
+      const body = { categoryId, amount, note: this.note().trim() || undefined };
       if (e) {
         const res = await this.api.updateEntry(y, this.initialMonth(), e.id, {
           ...body,
-          note: this.note.trim(),
-          itemId: this.itemId || null,
-          month: this.month,
+          note: this.note().trim(),
+          itemId: this.itemId() || null,
+          month: this.month(),
         });
         this.store.applyMonths(res);
       } else {
-        this.store.applyMonths(await this.api.addEntry(y, this.month, { ...body, itemId: this.itemId || undefined }));
-        this.amount = null;
-        this.note = '';
+        this.store.applyMonths(await this.api.addEntry(y, this.month(), { ...body, itemId: this.itemId() || undefined }));
+        this.amount.set('');
+        this.note.set('');
       }
       this.saved.emit();
     } catch (err) {

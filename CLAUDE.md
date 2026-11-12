@@ -36,7 +36,7 @@ users/{uid}/years/{year}/months/{m}  MonthDoc { entries[] }   entry = { id, cate
   - A category with amounts or items is archived (`archived: true`), never deleted.
   - Exactly one category may have `role: 'untraced'`, the target of the monthly-count correction.
 - **Items** (trips, purchases) belong to a category; entries can reference them with `itemId`.
-- **Monthly count:** suggested untraced = (month result excluding untraced) − (counted total change since the previous month). Stocks value is tracked separately and not counted as cash.
+- **Monthly count:** suggested untraced = (month result excluding untraced) − (counted total change since the previous month). January uses last year's December count (`prevDecember` in `GET /api/years/:y`). Stocks value is tracked separately and not counted as cash. Saving a count opens a confirmation with the required untraced amount (warning at ≥ €50); the user applies or skips it.
 - **Funds** are standalone pots in the profile, outside the monthly cash flow.
 
 ## Layout
@@ -77,7 +77,8 @@ private/                  git-ignored — the owner's real workbook lives here. 
 - **TanStack Table v9**: register features with `tableFeatures({...})` outside the component, then `injectTable(() => ({...}))`. See `entries/entries.ts`. Usage guides ship in `node_modules/@tanstack/angular-table/skills/`; v9 differs from v8.
 - **ECharts** via `ngx-echarts`, tree-shaken and lazy-loaded from `src/app/echarts.ts`. Register new chart types there.
 - **State:** pages read `FinanceStore` signals. Mutations call `ApiService`, then apply the returned doc with `store.applyYear` / `applyMonths` / `applyProfile`. Never refetch the whole year after a change.
-- **Form fields seeded from store data must update via `effect()`.** Data can arrive after the page opens (this caused a bug where the carry-over field showed 0).
+- **The app is zoneless: form fields must be signals.** Writing a plain field (e.g. inside an `effect()`) does not re-render. Seed form fields from store data with `effect(() => this.field.set(...))` and bind `[(ngModel)]="field"` to the signal. This caused the month not being preselected and the carry-over showing 0.
+- **`hlm-native-select` works with string values only.** Use `[value]="'' + x"` on options (not `[ngValue]`, which it ignores) and convert back with `(ngModelChange)="x.set(+$event)"`.
 - **Privacy mode** (eye button, `core/privacy.service.ts`) adds `.privacy` to `<html>`; `styles.css` blurs `.tabular-nums`, `td.num`, `[echarts]`, `.sensitive` and unfocused number inputs. **Every new amount shown in the UI must carry `tabular-nums` or `sensitive`** or it will leak in privacy mode.
 - **Responsive:** the year grid shows at `lg:` and up; phones get a month-by-month list.
 
@@ -95,6 +96,7 @@ private/                  git-ignored — the owner's real workbook lives here. 
   - The mirror rewrites whole tabs and sets the spreadsheet locale to `en_GB` so dot-decimal formulas parse.
   - The result is recorded in `profile.lastSync`.
   - It needs the Google Sheets API enabled and the sheet shared (Editor) with the service account.
+- **Demo mode** (`src/app/demo/`): "Try the demo" / `?demo` sets `AuthService.demo` with a fake user. `demoInterceptor` (registered before `authInterceptor`) answers every `/api` call from `DemoBackend`, an in-memory copy of the API over `createDemoState()` sample data, so nothing reaches the server. **When you add or change an API route, mirror it in `demo-backend.ts`** (tests: `demo-backend.spec.ts`). Sheet sync is refused in the demo.
 - **PWA:**
   - The service worker runs in production builds only; `/api/**` is never cached.
   - The install button lives in `install-button/` + `core/pwa-install.service.ts`.

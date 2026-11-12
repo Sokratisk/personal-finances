@@ -8,7 +8,7 @@
 
 Categories × months, monthly account counts, trips and purchases, standalone funds — with an optional live mirror to Google Sheets.
 
-[Live app](https://personal-finances.net) · [Features](#features) · [Tech stack](#tech-stack) · [Run locally](#run-locally) · [Deploy your own](#deploy-your-own)
+[Live app](https://personal-finances.net) · [**Try the demo**](https://personal-finances.net/?demo) · [Features](#features) · [Tech stack](#tech-stack) · [Run locally](#run-locally) · [Deploy your own](#deploy-your-own)
 
 </div>
 
@@ -37,6 +37,7 @@ Categories × months, monthly account counts, trips and purchases, standalone fu
 - 📥 **Spreadsheet import:** a script imports an existing yearly budget workbook and checks every month against the sheet's own totals.
 - 📱 **Installable app (PWA):** one-tap install on Android, Chrome and Edge, with Add to Home Screen instructions on iOS. Installed apps show an update prompt after each deploy.
 - 🔐 **Private by design:** Google sign-in. Every request is verified on the server, and each user only ever sees their own data.
+- 🧪 **Demo mode:** "Try the demo" on the sign-in screen (or [`/?demo`](https://personal-finances.net/?demo)) opens the full app with sample data. Everything runs in the browser and nothing is saved.
 - 💸 **€0 to run:** Cloudflare free plan plus Firebase Spark plan. No credit card needed.
 
 ## Tech stack

@@ -5,12 +5,14 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { provideEchartsCore } from 'ngx-echarts';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth.interceptor';
+import { demoInterceptor } from './demo/demo.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    // Demo first: in demo mode it answers /api calls in the browser, so nothing reaches the server.
+    provideHttpClient(withInterceptors([demoInterceptor, authInterceptor])),
     // ECharts is loaded on demand the first time a chart renders.
     provideEchartsCore({ echarts: () => import('./echarts').then((m) => m.default), theme: 'dark' }),
     provideServiceWorker('ngsw-worker.js', {

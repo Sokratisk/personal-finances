@@ -93,7 +93,7 @@ export class FinanceStore {
     this.data.update((d) => (d && d.year.year === r.year.year ? { ...d, year: r.year } : d));
   }
   applyMonths(r: MonthsResponse) {
-    this.data.update((d) => (d ? { year: r.year ?? d.year, months: { ...d.months, ...r.months } } : d));
+    this.data.update((d) => (d ? { ...d, year: r.year ?? d.year, months: { ...d.months, ...r.months } } : d));
   }
 }
 

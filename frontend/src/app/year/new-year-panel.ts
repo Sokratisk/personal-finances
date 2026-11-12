@@ -54,7 +54,7 @@ import type { Category } from '../core/models';
         </div>
       }
 
-      <button hlmBtn type="submit" [disabled]="saving()">{{ saving() ? 'Creating…' : 'Create ' + year }}</button>
+      <button hlmBtn type="submit" [disabled]="saving()">{{ saving() ? 'Creating…' : 'Create ' + year() }}</button>
     </form>
   `,
 })
@@ -79,16 +79,16 @@ export class NewYearPanel {
   });
   protected readonly picked = signal(new Set<string>());
   protected readonly saving = signal(false);
-  protected year = new Date().getFullYear() + 1;
-  protected opening = 0;
+  protected readonly year = signal(new Date().getFullYear() + 1);
+  protected readonly opening = signal(0);
 
   constructor() {
     effect(() => {
       const src = this.source();
-      this.year = src ? src + 1 : new Date().getFullYear();
+      this.year.set(src ? src + 1 : new Date().getFullYear());
       const d = this.store.data();
       const t = this.store.totals();
-      this.opening = d && t && d.year.year === src ? t.year.final : 0;
+      this.opening.set(d && t && d.year.year === src ? t.year.final : 0);
       this.picked.set(new Set(this.sourceCats().map((c) => c.id)));
     });
   }
@@ -111,8 +111,8 @@ export class NewYearPanel {
     try {
       const src = this.source();
       const res = await this.api.createYear({
-        year: Number(this.year),
-        opening: Number(this.opening) || 0,
+        year: Number(this.year()),
+        opening: Number(this.opening()) || 0,
         copyFrom: src && this.sourceCats().length ? src : undefined,
         categoryIds: src ? [...this.picked()] : undefined,
       });

@@ -148,11 +148,11 @@ export class Categories {
   protected newGroup = '';
   protected newItem = '';
   protected newAccount = '';
-  protected opening = 0;
+  protected readonly opening = signal(0);
 
   constructor() {
     // Keep the carry-over field in sync with the loaded year (data can arrive after the page opens).
-    effect(() => (this.opening = this.store.data()?.year.opening ?? 0));
+    effect(() => this.opening.set(this.store.data()?.year.opening ?? 0));
   }
 
   /** All categories of the year (including archived ones), in display sections. */
@@ -197,7 +197,7 @@ export class Categories {
   }
 
   protected async saveOpening() {
-    await this.run(this.api.setOpening(this.y, Number(this.opening) || 0));
+    await this.run(this.api.setOpening(this.y, Number(this.opening()) || 0));
     toast.success('Saved');
   }
 

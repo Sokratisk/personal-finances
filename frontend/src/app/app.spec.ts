@@ -12,7 +12,7 @@ describe('App', () => {
       imports: [App],
       providers: [
         provideRouter([]),
-        { provide: AuthService, useValue: { user: signal(null) } },
+        { provide: AuthService, useValue: { user: signal(null), demo: signal(false) } },
         { provide: FinanceStore, useValue: { init: () => {}, reset: () => {}, years: () => [], error: () => null, selectedYear: () => null } },
         { provide: SwUpdate, useValue: { isEnabled: false } },
       ],
@@ -25,5 +25,6 @@ describe('App', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('h1')?.textContent).toContain('Personal Finances');
     expect(el.textContent).toContain('Sign in with Google');
+    expect(el.textContent).toContain('Try the demo');
   });
 });

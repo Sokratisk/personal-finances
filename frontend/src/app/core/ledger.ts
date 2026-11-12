@@ -70,7 +70,7 @@ export function countTotal(c: Count | undefined): number | undefined {
  */
 export function untracedSuggestion(data: YearData, totals: Totals, m: number) {
   const now = countTotal(data.year.counts[m]);
-  const prev = m > 1 ? countTotal(data.year.counts[m - 1]) : undefined;
+  const prev = countTotal(m > 1 ? data.year.counts[m - 1] : (data.prevDecember ?? undefined));
   if (now === undefined || prev === undefined) return null;
   const recorded = totals.result[m]! + totals.untraced[m]!;
   const counted = now - prev;
