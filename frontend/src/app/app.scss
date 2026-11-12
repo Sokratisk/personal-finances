@@ -1,8 +1,10 @@
 header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
   padding: 1rem 1.5rem;
+  padding-top: calc(1rem + env(safe-area-inset-top));
   border-bottom: 1px solid #e5e7eb;
 
   h1 {

@@ -2,9 +2,14 @@
   "name": "personal-finances",
   "private": true,
   "scripts": {
-    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "predev": "node scripts/predev.mjs",
+    "dev": "concurrently --kill-others --names api,web --prefix-colors cyan,magenta \"npm:dev:backend\" \"npm:dev:frontend\"",
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend start",
+    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install",
     "deploy": "npm --prefix backend run deploy"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7"
   }
 }

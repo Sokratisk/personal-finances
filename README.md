@@ -9,7 +9,7 @@ Everything runs free: Cloudflare (free plan) + Firebase (Spark plan). No credit 
 | Database | Firestore + Firebase Auth (Google sign-in)  | Firebase Spark (free) plan                   |
 
 ```
-Browser ──► your-domain.com ──► Cloudflare Worker
+Browser ──► personal-finances.net ──► Cloudflare Worker
                                  ├─ /*      Angular files (free, unmetered)
                                  └─ /api/*  Hono: verifies the Firebase ID token,
                                             then reads/writes Firestore over REST
@@ -50,52 +50,51 @@ Free plan limits, far above personal use:
 
 ## 2. Run locally
 
-```bash
-npm run install:all
-npm --prefix backend run setup:dev-vars   # writes backend/.dev.vars from service-account.json
-npm --prefix frontend run build           # wrangler dev serves this build too
-```
-
-In two terminals:
+You need `backend/service-account.json` (step 1.5). Then, from the repo root:
 
 ```bash
-npm run dev:backend    # wrangler dev → http://localhost:8787  (try /api/health)
-npm run dev:frontend   # ng serve     → http://localhost:4200  (live reload; proxies /api to :8787)
+npm install    # first time only (installs the root dev runner)
+npm run dev
 ```
 
-Open http://localhost:4200 and sign in with Google.
-Local development uses the **same Firestore database** as production.
+Open **http://localhost:4200** and sign in with Google. Press `Ctrl+C` to stop both servers.
+
+`npm run dev` does the following:
+- Installs `backend/` and `frontend/` dependencies if they're missing.
+- Creates `backend/.dev.vars` (local secrets) from `service-account.json` if it's missing.
+- Starts both servers in one terminal:
+  - `[api]`: `wrangler dev` on http://localhost:8787, running the Hono API (`/api/health` to check).
+  - `[web]`: `ng serve` on http://localhost:4200, the Angular app with live reload. It proxies `/api` to :8787.
+
+You can also run them separately with `npm run dev:backend` and `npm run dev:frontend`.
+
+> Local development uses the **same Firestore database** as production.
+> If you rotate the service-account key, delete `backend/.dev.vars` and it will be regenerated.
 
 ## 3. Deploy to Cloudflare
 
-One time:
+Live at **https://personal-finances.net**. **Every push to `main` deploys automatically** through Cloudflare Workers Builds.
+
+### Manual deploy (optional)
 
 ```bash
-cd backend
-npx wrangler login               # opens browser
-npm run secret:push              # uploads service-account.json as the FIREBASE_SERVICE_ACCOUNT secret
+npm run deploy                   # from the repo root: builds Angular, then deploys the Worker
 ```
 
-Every deploy, from the repo root:
+### One-time setup (already done; for reference or a fresh account)
 
-```bash
-npm run deploy                   # builds Angular, then deploys the Worker
-```
-
-You get `https://personal-finances.<your-subdomain>.workers.dev`.
-
-Then in **Firebase → Authentication → Settings → Authorized domains**, add the `workers.dev` hostname and your custom domain.
-Without this, Google sign-in fails there.
-
-### Custom domain (bought on Cloudflare)
-
-`personal-finances.net` and `www.personal-finances.net` are set in `routes` in `backend/wrangler.jsonc`.
-`npm run deploy` attaches them and creates the DNS records and SSL certificate automatically.
-The domain must be active in the same Cloudflare account, with no existing DNS records for those hostnames.
-
-### Auto-deploy on git push (optional)
-
-*Workers & Pages → personal-finances → Settings → Build → Connect* → GitHub → `Sokratisk/personal-finances`:
+1. Log in and upload the service-account secret:
+   ```bash
+   cd backend
+   npx wrangler login               # opens browser
+   npm run secret:push              # uploads service-account.json as the FIREBASE_SERVICE_ACCOUNT secret
+   ```
+2. **Custom domain:** `personal-finances.net` and `www.personal-finances.net` are set in `routes` in `backend/wrangler.jsonc`.
+   Each deploy attaches them and creates the DNS records and SSL certificate automatically.
+   The domain must be active in the same Cloudflare account, with no existing DNS records for those hostnames.
+3. **Firebase → Authentication → Settings → Authorized domains:** add `personal-finances.net` and `www.personal-finances.net`
+   (plus the `workers.dev` hostname if you use it). Without this, Google sign-in fails there.
+4. **Auto-deploy:** *Workers & Pages → personal-finances → Settings → Build → Connect* → GitHub → `Sokratisk/personal-finances`:
 
 | Setting                 | Value                                                                              |
 | ----------------------- | ---------------------------------------------------------------------------------- |
@@ -107,6 +106,7 @@ The domain must be active in the same Cloudflare account, with no existing DNS r
 | Non-production branches | off (previews would use the production database)                                   |
 
 The `FIREBASE_SERVICE_ACCOUNT` secret stays in place across builds.
+`firestore.rules` is **not** auto-deployed. After changing it, run `firebase deploy --only firestore:rules`.
 
 ## API
 

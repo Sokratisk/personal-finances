@@ -2,12 +2,16 @@ import { TestBed } from '@angular/core/testing';
 import { App } from './app';
 import { AuthService } from './core/auth.service';
 import { signal } from '@angular/core';
+import { SwUpdate } from '@angular/service-worker';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [{ provide: AuthService, useValue: { user: signal(null) } }],
+      providers: [
+        { provide: AuthService, useValue: { user: signal(null) } },
+        { provide: SwUpdate, useValue: { isEnabled: false } },
+      ],
     }).compileComponents();
   });
 
