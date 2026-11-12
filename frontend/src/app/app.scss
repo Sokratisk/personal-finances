@@ -1,0 +1,28 @@
+header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+
+  h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    flex: 1;
+  }
+
+  .who {
+    color: #6b7280;
+  }
+}
+
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.signin {
+  text-align: center;
+  margin-top: 4rem;
+}

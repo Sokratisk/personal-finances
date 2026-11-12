@@ -1,0 +1,28 @@
+// One Cloudflare Worker serves both the Angular app (static assets) and the Hono API (/api/*).
+// Deploy: `npm run deploy` (builds Angular, then `wrangler deploy`).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "personal-finances",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  // Custom domains (DNS records + SSL are created automatically on deploy).
+  "routes": [
+    { "pattern": "personal-finances.net", "custom_domain": true },
+    { "pattern": "www.personal-finances.net", "custom_domain": true }
+  ],
+  "assets": {
+    "directory": "../frontend/dist/frontend/browser",
+    "binding": "ASSETS",
+    // Unknown paths return index.html so Angular's router can handle them.
+    "not_found_handling": "single-page-application",
+    // Only /api/* runs the Worker code; everything else is served as static files (free, unmetered).
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    "FIREBASE_PROJECT_ID": "personal-finances-1cbca",
+    "FIRESTORE_DATABASE": "(default)"
+  }
+  // Secret (not in this file): FIREBASE_SERVICE_ACCOUNT
+  //   prod:  npm run secret:push
+  //   local: npm run setup:dev-vars  (writes .dev.vars)
+}
