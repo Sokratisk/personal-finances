@@ -31,3 +31,6 @@ yarn-error.log*
 service-account*.json
 .firebase/
 .wrangler/
+
+# Private local files (your real data, exports) - never committed
+/private/

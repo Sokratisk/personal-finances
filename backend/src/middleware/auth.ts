@@ -1,7 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import type { AppEnv } from '../env';
+import type { AppEnv } from '../env.ts';
 
 // Google's public keys for Firebase ID tokens (jose caches them between requests).
 const firebaseKeys = createRemoteJWKSet(
