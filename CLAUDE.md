@@ -49,7 +49,9 @@ frontend/   Angular 22 app (standalone components, signals, @if/@for)
   src/app/trips/          items (trips, purchases…) across all years; open year live from the store, other years via GET /api/items
   src/app/funds/          funds       src/app/categories/  categories, items, accounts, carry-over
   src/app/settings/       Google Sheet link + sync status
-  src/app/shared/         summary cards
+  src/app/shared/         summary cards, dialog-position (topOnPhone)
+  src/app/demo/           demo mode: sample data, in-memory API, interceptor
+  src/app/app.ts          shell: header (single line on lg+, ☰ side menu below), year switcher, privacy toggle, demo banner
   libs/ui/                spartan/ui components (generated, editable)
 backend/    Hono app on the Cloudflare Workers runtime (NOT Node)
   src/routes/years.ts     years, categories, items, entries, counts, untraced
@@ -80,7 +82,17 @@ private/                  git-ignored — the owner's real workbook lives here. 
 - **The app is zoneless: form fields must be signals.** Writing a plain field (e.g. inside an `effect()`) does not re-render. Seed form fields from store data with `effect(() => this.field.set(...))` and bind `[(ngModel)]="field"` to the signal. This caused the month not being preselected and the carry-over showing 0.
 - **`hlm-native-select` works with string values only.** Use `[value]="'' + x"` on options (not `[ngValue]`, which it ignores) and convert back with `(ngModelChange)="x.set(+$event)"`.
 - **Privacy mode** (eye button, `core/privacy.service.ts`) adds `.privacy` to `<html>`; `styles.css` blurs `.tabular-nums`, `td.num`, `[echarts]`, `.sensitive` and unfocused number inputs. **Every new amount shown in the UI must carry `tabular-nums` or `sensitive`** or it will leak in privacy mode.
-- **Responsive:** the year grid shows at `lg:` and up; phones get a month-by-month list.
+- **Layout & responsive:**
+  - Header and `<main>` use `mx-auto w-full max-w-[1920px] px-4 lg:px-8`: full width, capped for ultra-wide screens. Don't reintroduce a narrow centred column.
+  - `lg:` and up: one-line header with the tabs. Below `lg`: compact header with a ☰ button opening a right-hand side menu (closes on navigation, backdrop click and Esc). Nav links are defined once in `App.links`.
+  - The year view is a grid at `lg:` and up and a month-by-month card list below. Both use the same `sections` (group header rows with per-month totals, collapsible). Collapsed groups are remembered in `localStorage` (`pf-collapsed-groups`).
+- **Dialogs with text inputs** bind `[positionStrategy]="topOnPhone(injector, openSignal)()"` (`shared/dialog-position.ts`) so they sit at the top on phones, above the keyboard. A strategy can't be reused after its dialog closes; the helper makes a fresh one on each open.
+- **Add form** (`year/entry-editor.ts`):
+  - Field order: month → amount → category → item → note. Month comes first so the phone keyboard doesn't open on load.
+  - The add dialog always starts on the current month. On phones it auto-opens once per launch, for the current year only.
+  - The amount field is a text input sanitised to digits, one decimal point (comma → point), 2 decimals and an optional leading minus.
+  - An ongoing trip (an item whose month matches) is preselected.
+- **Dashboard:** Balance has a Lines/Stacked toggle (stacked = each account + stocks value per month). Top expense categories shows the top 12, with "Show all"; the chart height grows with the number of rows.
 
 ## Architecture rules
 
@@ -109,3 +121,4 @@ private/                  git-ignored — the owner's real workbook lives here. 
 - In production, the service account is the Cloudflare secret `FIREBASE_SERVICE_ACCOUNT` (`npm --prefix backend run secret:push`).
 - Firebase project: `personal-finances-1cbca`, `(default)` database. The Firebase web config in `environment*.ts` is public by design.
 - **Local dev uses the production Firestore database and the owner's real sheet mirror.** Test with temporary data and clean it up. README screenshots must use sample data, never real data.
+- **README screenshots** (`docs/screenshots/`: year, dashboard, mobile, trips) are taken from the demo: serve the production build, open `/?demo` in headless Chrome, remove the "Demo mode" banner, then capture desktop (~1440px wide) and phone (~520px wide) shots.

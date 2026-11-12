@@ -17,25 +17,30 @@ Categories × months, monthly account counts, trips and purchases, standalone fu
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="Dashboard with monthly income/expenses/stocks, expenses by group, expected vs counted balance" width="560" />
+  <img src="docs/screenshots/dashboard.png" alt="Dashboard: income vs expenses per month, expenses by group, balance from monthly counts" width="560" />
   &nbsp;
-  <img src="docs/screenshots/mobile.png" alt="Phone view: one month at a time" width="190" />
+  <img src="docs/screenshots/mobile.png" alt="Phone view: one month at a time with collapsible groups" width="190" />
 </p>
 
-<p align="center"><sub>Screenshots use sample data.</sub></p>
+<p align="center">
+  <img src="docs/screenshots/trips.png" alt="Trips across all years with totals" width="560" />
+</p>
+
+<p align="center"><sub>Screenshots are taken from the built-in demo (sample data).</sub></p>
 
 ## Features
 
-- 🗓️ **Year view:** categories (in groups) × months with totals, before/after stocks and the yearly result — like a budget sheet. Tap any cell to see, add, edit or move its amounts. Future months are allowed. On phones it shows one month at a time.
+- 🗓️ **Year view:** categories × months with totals, before/after stocks and the yearly result — like a budget sheet. Groups (Bills, Home & food…) show their own monthly totals and collapse to a single line. Tap any cell to see, add, edit or move its amounts. Future months are allowed. On phones it shows one month at a time.
 - 🔁 **Years that carry over:** each year's result becomes the next year's opening balance. A new year starts clean with the categories you choose to keep.
 - 🏷️ **Dynamic categories:** income, expense or stocks; grouped and reorderable. Categories with history are archived, never lost. Any category can hold named **items** (e.g. trips, big purchases).
 - ✈️ **Trips:** every trip (or other item) across all years with its total and expenses; add expenses to an ongoing trip in one tap.
 - ⚖️ **Monthly count:** enter what each account really holds; the app suggests the "untraced" correction for missing money.
 - 🐷 **Funds:** standalone pots (a house budget, a gift card) that live outside your monthly cash flow.
-- 📊 **Dashboard & entries:** charts (monthly totals, spending by group, expected vs counted balance, top categories) and a searchable, sortable list of every amount.
+- 📊 **Dashboard & entries:** charts (income vs expenses, spending by group, balance from your counts as lines or stacked by account, all expense categories) and a searchable, sortable list of every amount.
+- 🙈 **Privacy mode:** one tap blurs every amount, so you can show the app to someone.
 - 📄 **Google Sheets mirror (optional, per user):** after every change the app rewrites a sheet with one tab per year — same layout, real formulas (`=42.2+16.5`) — plus a Funds tab.
 - 📥 **Spreadsheet import:** a script imports an existing yearly budget workbook and checks every month against the sheet's own totals.
-- 📱 **Installable app (PWA):** one-tap install on Android, Chrome and Edge, with Add to Home Screen instructions on iOS. Installed apps show an update prompt after each deploy.
+- 📱 **Mobile-first:** installable app (PWA) with one-tap install on Android, Chrome and Edge and Add to Home Screen instructions on iOS; a ☰ menu on phones; quick-add opens on launch. Installed apps show an update prompt after each deploy.
 - 🔐 **Private by design:** Google sign-in. Every request is verified on the server, and each user only ever sees their own data.
 - 🧪 **Demo mode:** "Try the demo" on the sign-in screen (or [`/?demo`](https://personal-finances.net/?demo)) opens the full app with sample data. Everything runs in the browser and nothing is saved.
 - 💸 **€0 to run:** Cloudflare free plan plus Firebase Spark plan. No credit card needed.
