@@ -1,4 +1,4 @@
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideArrowDown, lucideArrowUp, lucideArrowUpDown, lucideSearch, lucideTrash2 } from '@ng-icons/lucide';
@@ -31,6 +31,8 @@ import { MONTH_SHORT } from '../core/format';
 import { MONTHS } from '../core/models';
 
 interface Row {
+  /** When it was added (ISO). Undefined for amounts imported from the spreadsheet. */
+  added?: string;
   id: string;
   month: number;
   categoryId: string;
@@ -53,6 +55,7 @@ const features = tableFeatures({
 });
 const col = createColumnHelper<typeof features, Row>();
 const columns = col.columns([
+  col.accessor('added', { header: 'Added', sortFn: 'basic', sortUndefined: 'last', enableGlobalFilter: false }),
   col.accessor('month', { header: 'Month', sortFn: 'basic', filterFn: 'equals', enableGlobalFilter: false }),
   col.accessor('category', { header: 'Category', sortFn: 'alphanumeric' }),
   col.accessor('item', { header: 'Item', sortFn: 'alphanumeric' }),
@@ -63,7 +66,7 @@ const columns = col.columns([
 /** Every amount of the year in one searchable, sortable list. */
 @Component({
   selector: 'app-entries',
-  imports: [DecimalPipe, NgIcon, HlmBadgeImports, HlmButtonImports, HlmCardImports, HlmInputImports, HlmNativeSelectImports, HlmTableImports],
+  imports: [DatePipe, DecimalPipe, NgIcon, HlmBadgeImports, HlmButtonImports, HlmCardImports, HlmInputImports, HlmNativeSelectImports, HlmTableImports],
   providers: [provideIcons({ lucideArrowDown, lucideArrowUp, lucideArrowUpDown, lucideSearch, lucideTrash2 })],
   template: `
     <div class="grid gap-4">
@@ -103,6 +106,7 @@ const columns = col.columns([
             <tbody hlmTBody>
               @for (row of table.getRowModel().rows; track row.id) {
                 <tr hlmTr>
+                  <td hlmTd class="whitespace-nowrap text-muted-foreground">{{ row.original.added ? (row.original.added | date: 'd MMM y, HH:mm') : '—' }}</td>
                   <td hlmTd class="text-muted-foreground">{{ monthShort[row.original.month - 1] }}</td>
                   <td hlmTd>{{ row.original.category }}</td>
                   <td hlmTd>@if (row.original.item) { <span hlmBadge variant="secondary">{{ row.original.item }}</span> }</td>
@@ -115,7 +119,7 @@ const columns = col.columns([
                   </td>
                 </tr>
               } @empty {
-                <tr hlmTr><td hlmTd colspan="6" class="h-24 text-center text-muted-foreground">No entries.</td></tr>
+                <tr hlmTr><td hlmTd colspan="7" class="h-24 text-center text-muted-foreground">No entries.</td></tr>
               }
             </tbody>
           </table>
@@ -132,7 +136,7 @@ export class Entries {
 
   protected readonly search = signal('');
   protected readonly monthFilter = signal('');
-  private readonly sorting = signal<SortingState>([{ id: 'month', desc: true }]);
+  private readonly sorting = signal<SortingState>([{ id: 'added', desc: true }]) // most recent first;
   private readonly columnFilters = signal<ColumnFiltersState>([]);
 
   private readonly rows = computed<Row[]>(() => {
@@ -140,8 +144,9 @@ export class Entries {
     if (!d) return [];
     const cats = new Map(d.year.categories.map((c) => [c.id, c]));
     const items = new Map(d.year.items.map((i) => [i.id, i.name]));
-    return MONTHS.flatMap((m) =>
-      (d.months[m] ?? []).map((e) => ({
+    // Newest month and newest entry first, so amounts without a timestamp (imported) still read newest → oldest.
+    return [...MONTHS].reverse().flatMap((m) =>
+      [...(d.months[m] ?? [])].reverse().map((e) => ({
         id: e.id,
         month: m,
         categoryId: e.categoryId,
@@ -149,6 +154,7 @@ export class Entries {
         kind: cats.get(e.categoryId)?.kind ?? 'expense',
         item: e.itemId ? (items.get(e.itemId) ?? '') : '',
         note: e.note ?? '',
+        added: e.createdAt,
         amount: e.amount,
       })),
     );

@@ -69,6 +69,23 @@ export const profile = new Hono<AppEnv>()
     return reply(c, { ...p, lastSync });
   })
 
+  // ----- favourites (quick picks in the Add dialog) -----
+  .put('/favorites', async (c) => {
+    const b = await body(c);
+    const ids = (key: string) => {
+      const v = b[key];
+      if (!Array.isArray(v) || v.length > 100 || v.some((x) => typeof x !== 'string' || x.length > 64)) throw bad(`${key} must be a list of ids`);
+      return [...new Set(v as string[])];
+    };
+    const categories = ids('categories');
+    const items = ids('items');
+    const { profile: p } = await r(c).mutateProfile((p) => {
+      p.favoriteCategories = categories;
+      p.favoriteItems = items;
+    });
+    return reply(c, p);
+  })
+
   // ----- accounts (for the monthly count) -----
   .post('/accounts', async (c) => {
     const name = str(await body(c), 'name')!;

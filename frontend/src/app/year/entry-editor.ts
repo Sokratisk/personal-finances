@@ -37,6 +37,21 @@ import type { Entry } from '../core/models';
                placeholder="0.00" autocomplete="off" />
       </div>
 
+      @if (!categoryId() && favorites().length) {
+        <div class="grid gap-1.5" role="group" aria-label="Favourites">
+          <span class="text-sm font-medium">Favourites</span>
+          <div class="flex flex-wrap gap-1.5">
+            @for (f of favorites(); track f.key) {
+              <button type="button" class="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm transition-colors"
+                      [class]="isPicked(f) ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-muted'"
+                      [attr.aria-pressed]="isPicked(f)" (click)="pickFavorite(f)">
+                @if (f.itemId) { <span aria-hidden="true">✈</span> }{{ f.label }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
       @if (!categoryId()) {
         <div hlmField>
           <label hlmLabel for="ee-cat">Category</label>
@@ -113,6 +128,34 @@ export class EntryEditor {
   private readonly category = computed(() => this.categoryId() ?? this.pickedCategory());
   protected readonly itemsForCategory = computed(() => this.store.items().filter((i) => i.categoryId === this.category()));
 
+  /** Starred categories and items (trips) of the open year, as quick-pick chips. */
+  protected readonly favorites = computed(() => {
+    const favCats = this.store.favoriteCategories();
+    const favItems = this.store.favoriteItems();
+    const cats = this.store.activeCategories().filter((c) => favCats.has(c.id));
+    const active = new Set(this.store.activeCategories().map((c) => c.id));
+    const items = this.store.items().filter((i) => favItems.has(i.id) && active.has(i.categoryId));
+    return [
+      ...items.map((i) => ({ key: `i:${i.id}`, label: i.name, categoryId: i.categoryId, itemId: i.id as string | undefined })),
+      ...cats.map((c) => ({ key: `c:${c.id}`, label: c.name, categoryId: c.id, itemId: undefined as string | undefined })),
+    ];
+  });
+  /** Item to select once the category switch has refreshed the item list (see the effect below). */
+  private readonly preferredItem = signal<string | null>(null);
+
+  protected isPicked(f: { categoryId: string; itemId?: string }) {
+    if (f.itemId) return this.itemId() === f.itemId;
+    // A category chip is "on" unless one of the trip chips is the current pick.
+    return this.pickedCategory() === f.categoryId && !this.favorites().some((x) => x.itemId && x.itemId === this.itemId());
+  }
+
+  protected pickFavorite(f: { categoryId: string; itemId?: string }) {
+    this.preferredItem.set(f.itemId ?? null);
+    this.pickedCategory.set(f.categoryId);
+    if (f.itemId) this.itemId.set(f.itemId);
+    else this.itemId.set(''); // the category switch may then preselect an ongoing trip
+  }
+
   constructor() {
     // (Re)fill the form when the edited entry or month changes.
     effect(() => {
@@ -127,6 +170,13 @@ export class EntryEditor {
     effect(() => {
       const items = this.itemsForCategory();
       if (this.entry() || this.initialItemId()) return;
+      // A trip chip was tapped: keep that trip instead of guessing the ongoing one.
+      const preferred = untracked(() => this.preferredItem());
+      if (preferred && items.some((i) => i.id === preferred)) {
+        this.itemId.set(preferred);
+        this.preferredItem.set(null);
+        return;
+      }
       const month = untracked(() => this.month());
       this.itemId.set([...items].reverse().find((i) => i.month === month)?.id ?? '');
     });

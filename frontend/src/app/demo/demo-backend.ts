@@ -77,6 +77,11 @@ export class DemoBackend {
     this.on('GET', '/profile', () => this.profileRes());
     this.on('PUT', '/settings', syncOff);
     this.on('POST', '/sync', syncOff);
+    this.on('PUT', '/favorites', (_, b) => {
+      this.p.favoriteCategories = [...new Set((b['categories'] as string[]) ?? [])];
+      this.p.favoriteItems = [...new Set((b['items'] as string[]) ?? [])];
+      return this.profileRes();
+    });
 
     this.on('GET', '/items', () => ({
       items: [...this.state.years.values()].flatMap(({ year, months }) =>
@@ -238,7 +243,7 @@ export class DemoBackend {
     };
     this.on('POST', '/years/:y/months/:m/entries', ([y, m], b) => {
       this.cat(this.yearDoc(y!), String(b['categoryId']));
-      const entry: Entry = { id: newId(), categoryId: String(b['categoryId']), itemId: (b['itemId'] as string) || undefined, amount: r2(Number(b['amount'])), note: (b['note'] as string) || undefined };
+      const entry: Entry = { id: newId(), categoryId: String(b['categoryId']), itemId: (b['itemId'] as string) || undefined, amount: r2(Number(b['amount'])), note: (b['note'] as string) || undefined, createdAt: new Date().toISOString() };
       if (!entry.amount) fail(400, 'amount cannot be 0');
       month(y!, m!).push(entry);
       return { months: { [Number(m)]: month(y!, m!) }, entry };
@@ -277,7 +282,7 @@ export class DemoBackend {
       list.length = 0;
       list.push(...kept);
       const amount = r2(Number(b['amount']));
-      if (amount) list.push({ id: newId(), categoryId: cat.id, amount, note: 'Monthly count correction' });
+      if (amount) list.push({ id: newId(), categoryId: cat.id, amount, note: 'Monthly count correction', createdAt: new Date().toISOString() });
       return { months: { [Number(m)]: list }, year: doc };
     });
 

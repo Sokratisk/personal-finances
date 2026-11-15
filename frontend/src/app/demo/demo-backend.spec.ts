@@ -27,6 +27,15 @@ describe('DemoBackend', () => {
     const cat = (b.handle('GET', `/years/${y}`, null) as any).year.categories.find((c: any) => c.name === 'Groceries');
     const res = b.handle('POST', `/years/${y}/months/${m}/entries`, { categoryId: cat.id, amount: 12.5 }) as any;
     expect(res.months[m].some((e: any) => e.amount === 12.5 && e.categoryId === cat.id)).toBe(true);
+    const added = res.months[m].find((e: any) => e.amount === 12.5);
+    expect(Date.now() - Date.parse(added.createdAt)).toBeLessThan(5000); // stamped with the time it was added
+  });
+
+  it('saves favourites on the profile', () => {
+    const b = new DemoBackend();
+    const res = b.handle('PUT', '/favorites', { categories: ['c1', 'c1', 'c2'], items: ['t1'] }) as any;
+    expect(res.profile.favoriteCategories).toEqual(['c1', 'c2']);
+    expect(res.profile.favoriteItems).toEqual(['t1']);
   });
 
   it('refuses Google Sheet sync', () => {

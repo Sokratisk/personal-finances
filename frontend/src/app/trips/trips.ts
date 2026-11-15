@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, Injector, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown, lucideChevronRight, lucidePlane, lucidePlus } from '@ng-icons/lucide';
+import { lucideChevronDown, lucideChevronRight, lucidePlane, lucidePlus, lucideStar } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
@@ -33,7 +33,7 @@ interface Trip extends ItemSummary {
     DecimalPipe, FormsModule, NgIcon, HlmButtonImports, HlmCardImports, HlmDialogImports, HlmInputImports,
     HlmNativeSelectImports, HlmSkeletonImports, EntryEditor,
   ],
-  providers: [provideIcons({ lucideChevronDown, lucideChevronRight, lucidePlane, lucidePlus })],
+  providers: [provideIcons({ lucideChevronDown, lucideChevronRight, lucidePlane, lucidePlus, lucideStar })],
   template: `
     <div class="grid gap-6">
       <div class="flex flex-wrap items-end gap-3">
@@ -51,7 +51,7 @@ interface Trip extends ItemSummary {
           </div>
         }
         @if (activeCategoryInOpenYear()) {
-          <button hlmBtn size="sm" (click)="newOpen.set(true)"><ng-icon name="lucidePlus" /> New</button>
+          <button hlmBtn size="sm" (click)="newMonth = store.activeMonth(); newOpen.set(true)"><ng-icon name="lucidePlus" /> New</button>
         }
       </div>
 
@@ -78,7 +78,8 @@ interface Trip extends ItemSummary {
             </div>
             @for (t of y.trips; track t.id) {
               <div class="border-t">
-                <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left" (click)="toggle(t.id)">
+                <div class="flex items-center">
+                <button type="button" class="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 text-left" [class.pr-4]="!t.editable" (click)="toggle(t.id)">
                   <ng-icon [name]="open() === t.id ? 'lucideChevronDown' : 'lucideChevronRight'" class="shrink-0 text-muted-foreground" />
                   <div class="min-w-0 flex-1">
                     <p class="truncate font-medium">{{ t.name }}</p>
@@ -91,6 +92,15 @@ interface Trip extends ItemSummary {
                     <p class="text-xs text-muted-foreground">{{ monthLabel(t) }} · {{ t.entries.length }} {{ t.entries.length === 1 ? 'expense' : 'expenses' }}</p>
                   </div>
                 </button>
+                @if (t.editable) {
+                  <button hlmBtn variant="ghost" size="icon-sm" class="mx-2 shrink-0"
+                          [attr.aria-label]="store.favoriteItems().has(t.id) ? 'Remove from favourites' : 'Add to favourites'"
+                          [attr.aria-pressed]="store.favoriteItems().has(t.id)" [title]="store.favoriteItems().has(t.id) ? 'Favourite (shown in Add)' : 'Add to favourites'"
+                          (click)="star(t.id)">
+                    <ng-icon name="lucideStar" [class]="store.favoriteItems().has(t.id) ? 'text-amber-400 [&_svg]:fill-current' : ''" />
+                  </button>
+                }
+                </div>
                 @if (open() === t.id) {
                   <div class="grid gap-2 px-4 pb-4 pl-11">
                     <div class="rounded-md border text-sm">
@@ -124,7 +134,7 @@ interface Trip extends ItemSummary {
             <h2 hlmDialogTitle>{{ t.name }}</h2>
             <p hlmDialogDescription>Add an expense to this {{ (activeLabel() || 'trip').toLowerCase() === 'trips' ? 'trip' : 'item' }}</p>
           </hlm-dialog-header>
-          <app-entry-editor [categoryId]="t.categoryId" [initialItemId]="t.id" [initialMonth]="t.month ?? todayMonth" (saved)="addTo.set(null)" />
+          <app-entry-editor [categoryId]="t.categoryId" [initialItemId]="t.id" [initialMonth]="t.month ?? store.activeMonth()" (saved)="addTo.set(null)" />
         }
       </hlm-dialog-content>
     </hlm-dialog>
@@ -153,7 +163,6 @@ export class Trips {
   protected readonly months = MONTHS;
   protected readonly monthNames = MONTH_NAMES;
   protected readonly monthShort = MONTH_SHORT;
-  protected readonly todayMonth = new Date().getMonth() + 1;
 
   protected readonly loading = signal(true);
   private readonly otherYears = signal<ItemSummary[]>([]);
@@ -245,6 +254,14 @@ export class Trips {
       toast.error(errorMessage(e));
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  protected async star(id: string) {
+    try {
+      await this.store.toggleFavorite('item', id);
+    } catch (e) {
+      toast.error(errorMessage(e));
     }
   }
 

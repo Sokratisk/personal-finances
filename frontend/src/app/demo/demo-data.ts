@@ -60,7 +60,14 @@ export function createDemoState(): DemoState {
 
     for (let m = 1; m <= 12; m++) {
       const e: Entry[] = [];
-      const push = (c: Category, amount: number, extra: Partial<Entry> = {}) => e.push({ id: id(), categoryId: c.id, amount, ...extra });
+      // Spread 'added' times over the month (never in the future) so the Entries page has realistic dates.
+      const stamp = () => {
+        const days = year === thisYear && m === thisMonth ? now.getDate() : 27; // this month: only up to today
+        const d = new Date(year, m - 1, 1 + Math.floor(rnd() * days), 8 + Math.floor(rnd() * 14), Math.floor(rnd() * 60));
+        if (d > now) d.setTime(now.getTime() - Math.floor(rnd() * 6 * 3600_000)); // earlier today
+        return d.toISOString();
+      };
+      const push = (c: Category, amount: number, extra: Partial<Entry> = {}) => e.push({ id: id(), categoryId: c.id, amount, createdAt: stamp(), ...extra });
       if (m <= lastMonth) {
         push(salary, m === 7 || m === 12 ? 3400 : 2150, { note: m === 7 || m === 12 ? 'Salary + bonus' : undefined });
         push(vouchers, 130);
@@ -129,5 +136,16 @@ export function createDemoState(): DemoState {
     },
   ];
 
-  return { profile: { years: [thisYear - 1, thisYear], accounts, funds }, years };
+  const current = years.get(thisYear)!.year;
+  const latestTrip = [...current.items].sort((a, b) => (b.month ?? 0) - (a.month ?? 0))[0];
+  return {
+    profile: {
+      years: [thisYear - 1, thisYear],
+      accounts,
+      funds,
+      favoriteCategories: [groceries.id, fuel.id, goingOut.id, delivery.id],
+      favoriteItems: latestTrip ? [latestTrip.id] : [],
+    },
+    years,
+  };
 }

@@ -1,7 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideArchive, lucideArchiveRestore, lucideCheck, lucideChevronDown, lucideChevronUp, lucidePencil, lucidePlus, lucideTrash2, lucideX } from '@ng-icons/lucide';
+import { lucideArchive, lucideArchiveRestore, lucideCheck, lucideChevronDown, lucideChevronUp, lucidePencil, lucidePlus, lucideStar, lucideTrash2, lucideX } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -17,7 +17,7 @@ import type { Category, Kind } from '../core/models';
 @Component({
   selector: 'app-categories',
   imports: [FormsModule, NgIcon, HlmBadgeImports, HlmButtonImports, HlmCardImports, HlmInputImports, HlmNativeSelectImports],
-  providers: [provideIcons({ lucideArchive, lucideArchiveRestore, lucideCheck, lucideChevronDown, lucideChevronUp, lucidePencil, lucidePlus, lucideTrash2, lucideX })],
+  providers: [provideIcons({ lucideArchive, lucideArchiveRestore, lucideCheck, lucideChevronDown, lucideChevronUp, lucidePencil, lucidePlus, lucideStar, lucideTrash2, lucideX })],
   template: `
     @if (store.data(); as d) {
       <div class="grid gap-6">
@@ -75,6 +75,13 @@ import type { Category, Kind } from '../core/models';
                     <button hlmBtn variant="ghost" size="xs" (click)="toggleItems(c.id)">Items</button>
                     <button hlmBtn variant="ghost" size="icon-sm" aria-label="Move up" (click)="run(api.moveCategory(y, c.id, 'up'))"><ng-icon name="lucideChevronUp" /></button>
                     <button hlmBtn variant="ghost" size="icon-sm" aria-label="Move down" (click)="run(api.moveCategory(y, c.id, 'down'))"><ng-icon name="lucideChevronDown" /></button>
+                    @if (!c.archived) {
+                      <button hlmBtn variant="ghost" size="icon-sm" [attr.aria-label]="store.favoriteCategories().has(c.id) ? 'Remove from favourites' : 'Add to favourites'"
+                              [attr.aria-pressed]="store.favoriteCategories().has(c.id)" [title]="store.favoriteCategories().has(c.id) ? 'Favourite (shown in Add)' : 'Add to favourites'"
+                              (click)="star('category', c.id)">
+                        <ng-icon name="lucideStar" [class]="store.favoriteCategories().has(c.id) ? 'text-amber-400 [&_svg]:fill-current' : ''" />
+                      </button>
+                    }
                     <button hlmBtn variant="ghost" size="icon-sm" aria-label="Rename" (click)="startEdit(c)"><ng-icon name="lucidePencil" /></button>
                     @if (c.archived) {
                       <button hlmBtn variant="ghost" size="icon-sm" aria-label="Restore" (click)="run(api.updateCategory(y, c.id, { archived: false }))"><ng-icon name="lucideArchiveRestore" /></button>
@@ -199,6 +206,14 @@ export class Categories {
   protected async saveOpening() {
     await this.run(this.api.setOpening(this.y, Number(this.opening()) || 0));
     toast.success('Saved');
+  }
+
+  protected async star(kind: 'category' | 'item', id: string) {
+    try {
+      await this.store.toggleFavorite(kind, id);
+    } catch (e) {
+      toast.error(errorMessage(e));
+    }
   }
 
   protected async addCategory() {

@@ -40,6 +40,7 @@ export class ApiService {
   profile = () => this.get<ProfileResponse>('/profile');
   saveSettings = (sheetId: string | null) => this.put<ProfileResponse>('/settings', { sheetId });
   syncNow = () => this.post<ProfileResponse>('/sync');
+  saveFavorites = (b: { categories: string[]; items: string[] }) => this.put<ProfileResponse>('/favorites', b);
 
   // accounts
   addAccount = (name: string) => this.post<ProfileResponse>('/accounts', { name });

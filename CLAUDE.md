@@ -21,13 +21,13 @@ Node 24+ is required (Angular 22 doesn't support Node 23; the importer uses Node
 ## Data model (backend/src/model.ts — mirrored in frontend/src/app/core/models.ts)
 
 ```
-users/{uid}                          Profile  { years[], accounts[], funds[], sheetId?, lastSync? }
+users/{uid}                          Profile  { years[], accounts[], funds[], sheetId?, lastSync?, favoriteCategories?, favoriteItems? }
 users/{uid}/years/{year}             YearDoc  { opening, categories[], items[], counts{ "1".."12": {balances, stocksValue} } }
-users/{uid}/years/{year}/months/{m}  MonthDoc { entries[] }   entry = { id, categoryId, itemId?, amount, note? }
+users/{uid}/years/{year}/months/{m}  MonthDoc { entries[] }   entry = { id, categoryId, itemId?, amount, note?, createdAt? }
 ```
 
 - A year loads in ~13 reads (one `batchGet`). Don't add per-entry documents.
-- **Entries belong to a month, not a date.** Amounts are stored as typed: positive normally, negative for refunds/splits. The category's `kind` (`income` | `expense` | `stocks`) decides how it counts.
+- **Entries belong to a month, not a date.** `createdAt` (ISO) is only *when it was typed in*: the server sets it on create, edits and moves keep it, and imported amounts have none. The Entries page sorts by it, newest first (undated ones last, newest month first). Amounts are stored as typed: positive normally, negative for refunds/splits. The category's `kind` (`income` | `expense` | `stocks`) decides how it counts.
 - **Totals (same rules as the sheet)**, in `frontend/src/app/core/ledger.ts`:
   - before stocks = income − expenses;
   - result = before stocks − stocks;
@@ -37,7 +37,10 @@ users/{uid}/years/{year}/months/{m}  MonthDoc { entries[] }   entry = { id, cate
   - Exactly one category may have `role: 'untraced'`, the target of the monthly-count correction.
 - **Items** (trips, purchases) belong to a category; entries can reference them with `itemId`.
 - **Monthly count:** suggested untraced = (month result excluding untraced) − (counted total change since the previous month). January uses last year's December count (`prevDecember` in `GET /api/years/:y`). Stocks value is tracked separately and not counted as cash. Saving a count opens a confirmation with the required untraced amount (warning at ≥ €50); the user applies or skips it.
+- **Closed months:** a saved count closes its month. `FinanceStore.activeMonth` = max(today's month, last counted month + 1), capped at 12. It is the default for new amounts (Add dialog, new trip, trip expense), the month the phone view opens on and the highlighted column; counted months get a ✓. Counting December sets `yearClosed`. Amounts can still be added to closed months on purpose (cell or month picker). Clearing a month's count reopens it.
+- **Counts never change after the fact; untraced does.** A count is what was really in the accounts. When amounts (other than untraced) change in a counted month, `FinanceStore.applyMonths` → `checkCountedMonths` queues an `untracedPrompts` entry if untraced no longer matches. `<app-untraced-prompt>` (in the app shell, so it also covers the Entries page) offers Update / Keep as is. Changes to untraced itself never prompt. Tests: `core/finance.store.spec.ts`.
 - **Funds** are standalone pots in the profile, outside the monthly cash flow.
+- **Favourites:** `favoriteCategories` / `favoriteItems` are id lists on the profile (`PUT /api/favorites`). Category ids are stable across years, so starred categories carry over; items are per year. Starred on the Categories and Trips pages (`FinanceStore.toggleFavorite`).
 
 ## Layout
 
@@ -89,10 +92,11 @@ private/                  git-ignored — the owner's real workbook lives here. 
 - **Dialogs with text inputs** bind `[positionStrategy]="topOnPhone(injector, openSignal)()"` (`shared/dialog-position.ts`) so they sit at the top on phones, above the keyboard. A strategy can't be reused after its dialog closes; the helper makes a fresh one on each open.
 - **Add form** (`year/entry-editor.ts`):
   - Field order: month → amount → category → item → note. Month comes first so the phone keyboard doesn't open on load.
-  - The add dialog always starts on the current month. On phones it auto-opens once per launch, for the current year only.
+  - The add dialog starts on the active month (see Closed months) and explains it when that differs from the calendar month. On phones it auto-opens once per launch, for the current year only.
   - The amount field is a text input sanitised to digits, one decimal point (comma → point), 2 decimals and an optional leading minus.
   - An ongoing trip (an item whose month matches) is preselected.
-- **Dashboard:** Balance has a Lines/Stacked toggle (stacked = each account + stocks value per month). Top expense categories shows the top 12, with "Show all"; the chart height grows with the number of rows.
+  - Favourites appear as chips above the Category dropdown (quick add only, not in a cell). A trip chip selects its category **and** the trip; `preferredItem` stops the ongoing-trip effect from overriding that choice.
+- **Dashboard:** Balance has a Lines/Stacked toggle, Stacked by default (stacked = each account + stocks value per month). Top expense categories shows the top 12, with "Show all"; the chart height grows with the number of rows.
 
 ## Architecture rules
 

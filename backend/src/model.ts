@@ -49,6 +49,8 @@ export interface Entry {
   itemId?: string;
   amount: number;
   note?: string;
+  /** When it was added (ISO date-time). Missing on amounts imported from the spreadsheet. */
+  createdAt?: string;
 }
 
 export interface MonthDoc {
@@ -85,6 +87,10 @@ export interface Profile {
   /** Google Sheet the app mirrors into (optional, per user). */
   sheetId?: string;
   lastSync?: { at: string; ok: boolean; error?: string };
+  /** Starred category ids (ids stay the same across years) — shown as quick picks in the Add dialog. */
+  favoriteCategories?: string[];
+  /** Starred item ids (e.g. a trip). */
+  favoriteItems?: string[];
 }
 
 export const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;

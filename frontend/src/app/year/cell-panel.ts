@@ -1,4 +1,4 @@
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucidePencil, lucideTrash2 } from '@ng-icons/lucide';
@@ -14,7 +14,7 @@ import { EntryEditor } from './entry-editor';
 /** The amounts behind one category × month cell, with add / edit / delete. */
 @Component({
   selector: 'app-cell-panel',
-  imports: [DecimalPipe, NgIcon, HlmBadgeImports, HlmButtonImports, EntryEditor],
+  imports: [DatePipe, DecimalPipe, NgIcon, HlmBadgeImports, HlmButtonImports, EntryEditor],
   providers: [provideIcons({ lucidePencil, lucideTrash2 })],
   template: `
     <div class="grid gap-4">
@@ -23,6 +23,7 @@ import { EntryEditor } from './entry-editor';
           <div class="flex items-center gap-2 border-b px-3 py-2 last:border-0" [class.bg-muted]="editing()?.id === e.id">
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm">{{ e.note || '—' }}</p>
+              @if (e.createdAt) { <p class="text-xs text-muted-foreground">Added {{ e.createdAt | date: 'd MMM, HH:mm' }}</p> }
               @if (itemName(e); as name) {
                 <span hlmBadge variant="secondary" class="mt-0.5">{{ name }}</span>
               }

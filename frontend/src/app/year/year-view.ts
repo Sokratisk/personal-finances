@@ -1,5 +1,5 @@
 import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
-import { Component, Injector, computed, effect, inject, signal } from '@angular/core';
+import { Component, Injector, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronDown, lucideChevronLeft, lucideChevronRight, lucideChevronsDownUp, lucideChevronsUpDown, lucidePlus, lucideScale } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -112,7 +112,10 @@ let autoAddShown = false;
                   <th class="min-w-52 text-left">Category</th>
                   <th class="num">Total</th>
                   @for (m of months; track m) {
-                    <th class="num font-medium" [class.text-primary]="m === currentMonth()">{{ monthShort[m - 1] }}</th>
+                    <th class="num font-medium" [class.text-primary]="m === store.activeMonth()"
+                        [title]="m <= store.lastClosedMonth() ? 'Counted — closed' : m === store.activeMonth() ? 'Active month: new amounts go here' : ''">
+                      @if (m <= store.lastClosedMonth()) { <span class="mr-0.5 text-[10px] text-muted-foreground">✓</span> }{{ monthShort[m - 1] }}
+                    </th>
                   }
                 </tr>
               </thead>
@@ -256,8 +259,15 @@ let autoAddShown = false;
 
     <hlm-dialog [state]="addOpen() ? 'open' : 'closed'" (closed)="addOpen.set(false)" [positionStrategy]="addPos()">
       <hlm-dialog-content *hlmDialogPortal class="max-h-[calc(100dvh-1.5rem)] overflow-y-auto sm:max-w-md">
-        <hlm-dialog-header><h2 hlmDialogTitle>Add amount</h2></hlm-dialog-header>
-        <app-entry-editor [initialMonth]="todayMonth" (saved)="addOpen.set(false)" />
+        <hlm-dialog-header>
+          <h2 hlmDialogTitle>Add amount</h2>
+          @if (store.yearClosed()) {
+            <p hlmDialogDescription>{{ store.data()?.year?.year }} is closed (December is counted). Create the next year to add new amounts there.</p>
+          } @else if (store.activeMonth() !== store.calendarMonth()) {
+            <p hlmDialogDescription>{{ monthName(store.lastClosedMonth()) }} is closed, so new amounts go to {{ monthName(store.activeMonth()) }}.</p>
+          }
+        </hlm-dialog-header>
+        <app-entry-editor [initialMonth]="store.activeMonth()" (saved)="addOpen.set(false)" />
       </hlm-dialog-content>
     </hlm-dialog>
 
@@ -301,21 +311,26 @@ export class YearView {
   protected readonly newYearOpen = signal(false);
 
   protected readonly t = computed(() => this.store.totals()!);
-  protected readonly currentMonth = computed(() =>
-    this.store.data()?.year.year === new Date().getFullYear() ? new Date().getMonth() + 1 : null,
-  );
-  protected readonly phoneMonth = signal(this.currentMonth() ?? new Date().getMonth() + 1);
+  /** Month shown in the phone view; follows the active month when the year (re)loads. */
+  protected readonly phoneMonth = signal(this.store.activeMonth());
   // Forms with inputs sit near the top on phones so the keyboard doesn't cover them.
   private readonly injector = inject(Injector);
   protected readonly addPos = topOnPhone(this.injector, this.addOpen);
   protected readonly cellPos = topOnPhone(this.injector, this.cell);
   protected readonly countPos = topOnPhone(this.injector, this.countMonth);
 
-  /** The Add dialog always starts on the current calendar month. */
-  protected readonly todayMonth = new Date().getMonth() + 1;
-
   constructor() {
     effect(() => saveCollapsed(this.collapsed()));
+
+    // Open the phone view on the active month whenever a year loads.
+    let shownFor: number | null = null;
+    effect(() => {
+      const y = this.store.data()?.year.year ?? null;
+      if (y !== null && y !== shownFor) {
+        shownFor = y;
+        this.phoneMonth.set(untracked(() => this.store.activeMonth()));
+      }
+    });
 
     // On phones, open the Add dialog once per app launch — quick entry is the main use there.
     // Only for the current year, so amounts never land in the wrong year by accident.

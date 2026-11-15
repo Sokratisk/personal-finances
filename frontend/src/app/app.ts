@@ -23,10 +23,11 @@ import { AuthService } from './core/auth.service';
 import { FinanceStore } from './core/finance.store';
 import { PrivacyService } from './core/privacy.service';
 import { InstallButton } from './install-button/install-button';
+import { UntracedPrompt } from './year/untraced-prompt';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, NgIcon, HlmButtonImports, HlmToasterImports, InstallButton],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, NgIcon, HlmButtonImports, HlmToasterImports, InstallButton, UntracedPrompt],
   providers: [
     provideIcons({ lucideCalendarDays, lucideEye, lucideEyeOff, lucideLayoutDashboard, lucideList, lucideLogOut, lucideMenu, lucidePiggyBank, lucidePlane, lucideRefreshCw, lucideSettings, lucideTags, lucideX }),
   ],
@@ -157,6 +158,7 @@ import { InstallButton } from './install-button/install-button';
       }
     </main>
 
+    <app-untraced-prompt />
     <hlm-toaster position="bottom-center" theme="dark" richColors />
   `,
 })

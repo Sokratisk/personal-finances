@@ -160,10 +160,10 @@ export class CountPanel {
       const c = this.check();
       if (c && !this.matches(c)) this.confirm.set(c);
       else if (c) {
-        toast.success('Count saved — untraced already matches');
+        toast.success(`Count saved — untraced already matches.${this.closedNote()}`);
         this.done.emit();
       } else {
-        toast.success('Count saved');
+        toast.success(`Count saved.${this.closedNote()}`);
         this.done.emit();
       }
     } catch (e) {
@@ -177,7 +177,7 @@ export class CountPanel {
     this.saving.set(true);
     try {
       this.store.applyMonths(await this.api.setUntraced(this.store.y, this.month(), amount));
-      toast.success(`Count saved · untraced set to ${amount.toFixed(2)}`);
+      toast.success(`Count saved · untraced set to ${amount.toFixed(2)}.${this.closedNote()}`);
       this.done.emit();
     } catch (e) {
       toast.error(errorMessage(e));
@@ -186,8 +186,16 @@ export class CountPanel {
     }
   }
 
+  /** " November is closed — new amounts go to December." when this count moved the active month. */
+  private closedNote(): string {
+    const m = this.month();
+    if (m !== this.store.lastClosedMonth()) return '';
+    if (m === 12) return ` ${this.store.data()?.year.year} is closed.`;
+    return ` ${monthName(m)} is closed — new amounts go to ${monthName(m + 1)}.`;
+  }
+
   protected skip() {
-    toast.success('Count saved · untraced left unchanged');
+    toast.success(`Count saved · untraced left unchanged.${this.closedNote()}`);
     this.done.emit();
   }
 }

@@ -127,7 +127,7 @@ export class Dashboard {
     { value: 'lines', label: 'Lines' },
     { value: 'stacked', label: 'Stacked' },
   ] as const;
-  protected readonly balanceMode = signal<'lines' | 'stacked'>('lines');
+  protected readonly balanceMode = signal<'lines' | 'stacked'>('stacked');
 
   protected readonly balanceChart = computed<EChartsCoreOption>(() => {
     const d = this.store.data();

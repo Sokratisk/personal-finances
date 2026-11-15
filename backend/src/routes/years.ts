@@ -190,6 +190,7 @@ export const years = new Hono<AppEnv>()
       itemId: str(b, 'itemId', { optional: true }),
       amount: num(b, 'amount')!,
       note: str(b, 'note', { optional: true, max: 200 }),
+      createdAt: new Date().toISOString(),
     };
     if (entry.amount === 0) throw bad('amount cannot be 0');
     await checkRefs(c, y, entry);
@@ -261,7 +262,7 @@ export const years = new Hono<AppEnv>()
       const kept = list.filter((e) => e.categoryId !== catId);
       list.length = 0;
       list.push(...kept);
-      if (amount !== 0) list.push({ id: newId(), categoryId: catId, amount, note: 'Monthly count correction' });
+      if (amount !== 0) list.push({ id: newId(), categoryId: catId, amount, note: 'Monthly count correction', createdAt: new Date().toISOString() });
     });
     mirror(c, y);
     return c.json({ months: { [m]: entries }, year: doc });

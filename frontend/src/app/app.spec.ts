@@ -13,7 +13,7 @@ describe('App', () => {
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: { user: signal(null), demo: signal(false) } },
-        { provide: FinanceStore, useValue: { init: () => {}, reset: () => {}, years: () => [], error: () => null, selectedYear: () => null } },
+        { provide: FinanceStore, useValue: { init: () => {}, reset: () => {}, years: () => [], error: () => null, selectedYear: () => null, untracedPrompts: signal([]) } },
         { provide: SwUpdate, useValue: { isEnabled: false } },
       ],
     }).compileComponents();

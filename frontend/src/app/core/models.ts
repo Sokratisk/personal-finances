@@ -38,6 +38,8 @@ export interface Entry {
   itemId?: string;
   amount: number;
   note?: string;
+  /** When it was added (ISO date-time). Missing on amounts imported from the spreadsheet. */
+  createdAt?: string;
 }
 
 export interface YearData {
@@ -75,6 +77,10 @@ export interface Profile {
   funds: Fund[];
   sheetId?: string;
   lastSync?: { at: string; ok: boolean; error?: string };
+  /** Starred category ids (ids stay the same across years) — shown as quick picks in the Add dialog. */
+  favoriteCategories?: string[];
+  /** Starred item ids (e.g. a trip). */
+  favoriteItems?: string[];
 }
 
 /** An item (trip, purchase…) with its amounts, from any year (GET /api/items). */
