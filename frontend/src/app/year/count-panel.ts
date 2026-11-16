@@ -66,7 +66,7 @@ type Check = NonNullable<ReturnType<typeof untracedSuggestion>>;
       </div>
     } @else {
       <!-- Step 1: enter balances -->
-      <form (ngSubmit)="save()" class="grid gap-4">
+      <form [id]="formId" (ngSubmit)="save()" class="grid gap-4">
         <div class="grid gap-2">
           @for (a of store.activeAccounts(); track a.id) {
             <div class="grid grid-cols-[1fr_9rem] items-center gap-3">
@@ -95,7 +95,6 @@ type Check = NonNullable<ReturnType<typeof untracedSuggestion>>;
           }
         </div>
 
-        <button hlmBtn type="submit" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save count' }}</button>
       </form>
     }
   `,
@@ -110,9 +109,10 @@ export class CountPanel {
 
   protected readonly balances = signal<Record<string, number | null>>({});
   protected readonly stocksValue = signal<number | null>(null);
-  protected readonly saving = signal(false);
+  readonly saving = signal(false);
+  readonly formId = 'count-form';
   /** Set after saving when the untraced amount needs confirming. */
-  protected readonly confirm = signal<Check | null>(null);
+  readonly confirm = signal<Check | null>(null);
 
   protected readonly draftTotal = computed(() =>
     round2(Object.values(this.balances()).reduce<number>((s, v) => s + (Number(v) || 0), 0)),

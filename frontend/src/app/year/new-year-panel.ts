@@ -15,7 +15,7 @@ import type { Category } from '../core/models';
   selector: 'app-new-year-panel',
   imports: [FormsModule, HlmButtonImports, HlmFieldImports, HlmInputImports, HlmLabelImports],
   template: `
-    <form (ngSubmit)="create()" class="grid gap-4">
+    <form [id]="formId" (ngSubmit)="create()" class="grid gap-4">
       <div class="grid grid-cols-2 gap-3">
         <div hlmField>
           <label hlmLabel for="ny-year">Year</label>
@@ -54,7 +54,6 @@ import type { Category } from '../core/models';
         </div>
       }
 
-      <button hlmBtn type="submit" [disabled]="saving()">{{ saving() ? 'Creating…' : 'Create ' + year() }}</button>
     </form>
   `,
 })
@@ -78,8 +77,9 @@ export class NewYearPanel {
     ].filter((g) => g.categories.length);
   });
   protected readonly picked = signal(new Set<string>());
-  protected readonly saving = signal(false);
-  protected readonly year = signal(new Date().getFullYear() + 1);
+  readonly saving = signal(false);
+  readonly formId = 'new-year-form';
+  readonly year = signal(new Date().getFullYear() + 1);
   protected readonly opening = signal(0);
 
   constructor() {

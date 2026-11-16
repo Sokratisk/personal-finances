@@ -11,6 +11,8 @@ import { FinanceStore, errorMessage } from '../core/finance.store';
 import { MONTH_NAMES } from '../core/format';
 import type { Entry } from '../core/models';
 
+let editorCount = 0;
+
 /**
  * Add or edit one amount. With `categoryId` set the category is fixed (used inside a cell);
  * otherwise the user picks it. Amounts can be negative (refunds, split bills).
@@ -19,7 +21,7 @@ import type { Entry } from '../core/models';
   selector: 'app-entry-editor',
   imports: [FormsModule, HlmButtonImports, HlmFieldImports, HlmInputImports, HlmLabelImports, HlmNativeSelectImports],
   template: `
-    <form #f="ngForm" (ngSubmit)="save()" class="grid gap-3">
+    <form #f="ngForm" [id]="formId" (ngSubmit)="save()" class="grid gap-3">
       <!-- Order: month → amount → category (month first so the phone keyboard doesn't pop up on open) -->
       <div hlmField>
         <label hlmLabel for="ee-month">Month</label>
@@ -85,14 +87,10 @@ import type { Entry } from '../core/models';
         <input hlmInput id="ee-note" name="note" [(ngModel)]="note" maxlength="200" placeholder="e.g. Supermarket" autocomplete="off" />
       </div>
 
-      <div class="flex gap-2">
-        <button hlmBtn type="submit" class="flex-1" [disabled]="f.invalid || saving()">
-          {{ saving() ? 'Saving…' : entry() ? 'Save' : 'Add' }}
-        </button>
-        @if (entry()) {
-          <button hlmBtn type="button" variant="outline" (click)="cancelled.emit()">Cancel</button>
-        }
-      </div>
+      <!-- The submit button lives in the dialog header (<app-dialog-header [formId]="editor.formId">). -->
+      @if (entry()) {
+        <button hlmBtn type="button" variant="outline" size="sm" class="justify-self-start" (click)="cancelled.emit()">Cancel editing</button>
+      }
     </form>
   `,
 })
@@ -116,7 +114,10 @@ export class EntryEditor {
     { kind: 'income', label: 'Income' },
     { kind: 'stocks', label: 'Stocks' },
   ] as const;
-  protected readonly saving = signal(false);
+  readonly saving = signal(false);
+  /** Lets a dialog header button submit this form from outside it. */
+  readonly formId = `entry-form-${++editorCount}`;
+  readonly submitLabel = computed(() => (this.entry() ? 'Save' : 'Add'));
 
   // Signals (not plain fields): they're filled from effects, and only signal writes re-render in zoneless Angular.
   protected readonly amount = signal('');
@@ -201,7 +202,14 @@ export class EntryEditor {
   protected async save() {
     const categoryId = this.category();
     const amount = Number(this.amount());
-    if (!categoryId || !Number.isFinite(amount) || !amount) return;
+    if (!Number.isFinite(amount) || !amount) {
+      toast.error('Enter an amount');
+      return;
+    }
+    if (!categoryId) {
+      toast.error('Choose a category');
+      return;
+    }
     this.saving.set(true);
     try {
       const y = this.store.y;

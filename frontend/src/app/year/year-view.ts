@@ -16,6 +16,7 @@ import { CellPanel } from './cell-panel';
 import { CountPanel } from './count-panel';
 import { EntryEditor } from './entry-editor';
 import { NewYearPanel } from './new-year-panel';
+import { DialogHeader } from '../shared/dialog-header';
 
 interface Section {
   key: string;
@@ -51,7 +52,7 @@ let autoAddShown = false;
   selector: 'app-year-view',
   imports: [
     DecimalPipe, NgTemplateOutlet, NgIcon, HlmButtonImports, HlmCardImports, HlmDialogImports, HlmSkeletonImports,
-    SummaryCards, CellPanel, CountPanel, EntryEditor, NewYearPanel,
+    SummaryCards, CellPanel, CountPanel, EntryEditor, NewYearPanel, DialogHeader,
   ],
   providers: [provideIcons({ lucideChevronDown, lucideChevronLeft, lucideChevronRight, lucideChevronsDownUp, lucideChevronsUpDown, lucidePlus, lucideScale })],
   styles: `
@@ -246,54 +247,53 @@ let autoAddShown = false;
 
     <!-- Dialogs -->
     <hlm-dialog [state]="cell() ? 'open' : 'closed'" (closed)="cell.set(null)" [positionStrategy]="cellPos()">
-      <hlm-dialog-content *hlmDialogPortal class="max-h-[calc(100dvh-1.5rem)] overflow-y-auto sm:max-w-md">
+      <hlm-dialog-content *hlmDialogPortal [showCloseButton]="false" class="max-h-[calc(100dvh-1.5rem)] overflow-y-auto sm:max-w-md">
         @if (cell(); as c) {
-          <hlm-dialog-header>
-            <h2 hlmDialogTitle>{{ c.category.name }}</h2>
-            <p hlmDialogDescription>{{ monthName(c.month) }} {{ store.data()?.year?.year }}</p>
-          </hlm-dialog-header>
-          <app-cell-panel [categoryId]="c.category.id" [month]="c.month" />
+          <app-dialog-header [title]="c.category.name" [actionLabel]="cellPanel.editor()?.submitLabel() ?? 'Add'"
+                             [formId]="cellPanel.editor()?.formId ?? null" [busy]="cellPanel.editor()?.saving() ?? false">
+            {{ monthName(c.month) }} {{ store.data()?.year?.year }}
+          </app-dialog-header>
+          <app-cell-panel #cellPanel [categoryId]="c.category.id" [month]="c.month" />
         }
       </hlm-dialog-content>
     </hlm-dialog>
 
     <hlm-dialog [state]="addOpen() ? 'open' : 'closed'" (closed)="addOpen.set(false)" [positionStrategy]="addPos()">
-      <hlm-dialog-content *hlmDialogPortal class="max-h-[calc(100dvh-1.5rem)] overflow-y-auto sm:max-w-md">
-        <hlm-dialog-header>
-          <h2 hlmDialogTitle>Add amount</h2>
+      <hlm-dialog-content *hlmDialogPortal [showCloseButton]="false" class="max-h-[calc(100dvh-1.5rem)] overflow-y-auto sm:max-w-md">
+        <app-dialog-header title="Add amount" actionLabel="Add" [formId]="addEditor.formId" [busy]="addEditor.saving()">
           @if (store.yearClosed()) {
-            <p hlmDialogDescription>{{ store.data()?.year?.year }} is closed (December is counted). Create the next year to add new amounts there.</p>
+            {{ store.data()?.year?.year }} is closed (December is counted). Create the next year to add new amounts there.
           } @else if (store.activeMonth() !== store.calendarMonth()) {
-            <p hlmDialogDescription>{{ monthName(store.lastClosedMonth()) }} is closed, so new amounts go to {{ monthName(store.activeMonth()) }}.</p>
+            {{ monthName(store.lastClosedMonth()) }} is closed, so new amounts go to {{ monthName(store.activeMonth()) }}.
           }
-        </hlm-dialog-header>
-        <app-entry-editor [initialMonth]="store.activeMonth()" (saved)="addOpen.set(false)" />
+        </app-dialog-header>
+        <app-entry-editor #addEditor [initialMonth]="store.activeMonth()" (saved)="addOpen.set(false)" />
       </hlm-dialog-content>
     </hlm-dialog>
 
     <hlm-dialog [state]="countMonth() ? 'open' : 'closed'" (closed)="countMonth.set(null)" [positionStrategy]="countPos()">
-      <hlm-dialog-content *hlmDialogPortal class="max-h-[calc(100dvh-1.5rem)] overflow-y-auto sm:max-w-md">
+      <hlm-dialog-content *hlmDialogPortal [showCloseButton]="false" class="max-h-[calc(100dvh-1.5rem)] overflow-y-auto sm:max-w-md">
         @if (countMonth(); as m) {
-          <hlm-dialog-header>
-            <h2 hlmDialogTitle>Monthly count</h2>
-            <div class="flex items-center gap-1">
+          <app-dialog-header title="Monthly count" [actionLabel]="countPanel.confirm() || !store.activeAccounts().length ? null : 'Save'"
+                             [formId]="countPanel.formId" [busy]="countPanel.saving()">
+            <span class="inline-flex items-center gap-1">
               <button hlmBtn variant="ghost" size="icon-xs" aria-label="Previous month" [disabled]="m === 1" (click)="countMonth.set(m - 1)"><ng-icon name="lucideChevronLeft" /></button>
-              <p hlmDialogDescription>{{ monthName(m) }} {{ store.data()?.year?.year }}</p>
+              {{ monthName(m) }} {{ store.data()?.year?.year }}
               <button hlmBtn variant="ghost" size="icon-xs" aria-label="Next month" [disabled]="m === 12" (click)="countMonth.set(m + 1)"><ng-icon name="lucideChevronRight" /></button>
-            </div>
-          </hlm-dialog-header>
-          <app-count-panel [month]="m" (done)="countMonth.set(null)" />
+            </span>
+          </app-dialog-header>
+          <app-count-panel #countPanel [month]="m" (done)="countMonth.set(null)" />
         }
       </hlm-dialog-content>
     </hlm-dialog>
 
     <hlm-dialog [state]="newYearOpen() ? 'open' : 'closed'" (closed)="newYearOpen.set(false)">
-      <hlm-dialog-content *hlmDialogPortal class="sm:max-w-lg">
-        <hlm-dialog-header>
-          <h2 hlmDialogTitle>New year</h2>
-          <p hlmDialogDescription>Starts clean — only the categories you pick are copied.</p>
-        </hlm-dialog-header>
-        <app-new-year-panel (created)="newYearOpen.set(false)" />
+      <hlm-dialog-content *hlmDialogPortal [showCloseButton]="false" class="sm:max-w-lg">
+        <app-dialog-header title="New year" [actionLabel]="'Create ' + newYear.year()" [formId]="newYear.formId"
+                           [busy]="newYear.saving()" busyLabel="Creating…">
+          Starts clean — only the categories you pick are copied.
+        </app-dialog-header>
+        <app-new-year-panel #newYear (created)="newYearOpen.set(false)" />
       </hlm-dialog-content>
     </hlm-dialog>
   `,

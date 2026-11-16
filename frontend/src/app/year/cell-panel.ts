@@ -1,5 +1,5 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal, viewChild } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucidePencil, lucideTrash2 } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -58,6 +58,8 @@ export class CellPanel {
 
   readonly categoryId = input.required<string>();
   readonly month = input.required<number>();
+  /** The add/edit form (its submit button is in the dialog header). */
+  readonly editor = viewChild(EntryEditor);
 
   protected readonly editing = signal<Entry | null>(null);
   protected readonly entries = computed(() => {

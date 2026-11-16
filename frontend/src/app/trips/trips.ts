@@ -17,6 +17,7 @@ import { round2 } from '../core/ledger';
 import { type ItemSummary, MONTHS } from '../core/models';
 import { topOnPhone } from '../shared/dialog-position';
 import { EntryEditor } from '../year/entry-editor';
+import { DialogHeader } from '../shared/dialog-header';
 
 interface Trip extends ItemSummary {
   total: number;
@@ -31,7 +32,7 @@ interface Trip extends ItemSummary {
   selector: 'app-trips',
   imports: [
     DecimalPipe, FormsModule, NgIcon, HlmButtonImports, HlmCardImports, HlmDialogImports, HlmInputImports,
-    HlmNativeSelectImports, HlmSkeletonImports, EntryEditor,
+    HlmNativeSelectImports, HlmSkeletonImports, EntryEditor, DialogHeader,
   ],
   providers: [provideIcons({ lucideChevronDown, lucideChevronRight, lucidePlane, lucidePlus, lucideStar })],
   template: `
@@ -128,30 +129,28 @@ interface Trip extends ItemSummary {
 
     <!-- Add expense to a trip -->
     <hlm-dialog [state]="addTo() ? 'open' : 'closed'" (closed)="addTo.set(null)" [positionStrategy]="addPos()">
-      <hlm-dialog-content *hlmDialogPortal class="max-h-[calc(100dvh-1.5rem)] overflow-y-auto sm:max-w-md">
+      <hlm-dialog-content *hlmDialogPortal [showCloseButton]="false" class="max-h-[calc(100dvh-1.5rem)] overflow-y-auto sm:max-w-md">
         @if (addTo(); as t) {
-          <hlm-dialog-header>
-            <h2 hlmDialogTitle>{{ t.name }}</h2>
-            <p hlmDialogDescription>Add an expense to this {{ (activeLabel() || 'trip').toLowerCase() === 'trips' ? 'trip' : 'item' }}</p>
-          </hlm-dialog-header>
-          <app-entry-editor [categoryId]="t.categoryId" [initialItemId]="t.id" [initialMonth]="t.month ?? store.activeMonth()" (saved)="addTo.set(null)" />
+          <app-dialog-header [title]="t.name" actionLabel="Add" [formId]="tripEditor.formId" [busy]="tripEditor.saving()">
+            Add an expense to this {{ (activeLabel() || 'trip').toLowerCase() === 'trips' ? 'trip' : 'item' }}
+          </app-dialog-header>
+          <app-entry-editor #tripEditor [categoryId]="t.categoryId" [initialItemId]="t.id" [initialMonth]="t.month ?? store.activeMonth()" (saved)="addTo.set(null)" />
         }
       </hlm-dialog-content>
     </hlm-dialog>
 
     <!-- New trip -->
     <hlm-dialog [state]="newOpen() ? 'open' : 'closed'" (closed)="newOpen.set(false)" [positionStrategy]="newPos()">
-      <hlm-dialog-content *hlmDialogPortal class="sm:max-w-sm">
-        <hlm-dialog-header>
-          <h2 hlmDialogTitle>New {{ (activeLabel() || 'trip').toLowerCase() === 'trips' ? 'trip' : 'item' }}</h2>
-          <p hlmDialogDescription>In {{ store.data()?.year?.year }}. Its expenses go into "{{ activeLabel() }}" in the month you choose.</p>
-        </hlm-dialog-header>
-        <form class="grid gap-3" (ngSubmit)="create()">
+      <hlm-dialog-content *hlmDialogPortal [showCloseButton]="false" class="sm:max-w-sm">
+        <app-dialog-header [title]="'New ' + ((activeLabel() || 'trip').toLowerCase() === 'trips' ? 'trip' : 'item')" actionLabel="Create"
+                           formId="new-item-form" [busy]="saving()" busyLabel="Creating…" [disabled]="!newName.trim()">
+          In {{ store.data()?.year?.year }}. Its expenses go into "{{ activeLabel() }}" in the month you choose.
+        </app-dialog-header>
+        <form id="new-item-form" class="grid gap-3" (ngSubmit)="create()">
           <input hlmInput name="name" placeholder="e.g. Crete summer" [(ngModel)]="newName" required />
           <hlm-native-select name="month" [ngModel]="'' + newMonth" (ngModelChange)="newMonth = +$event">
             @for (m of months; track m) { <option hlmNativeSelectOption [value]="'' + m">{{ monthNames[m - 1] }}</option> }
           </hlm-native-select>
-          <button hlmBtn type="submit" [disabled]="!newName.trim() || saving()">Create</button>
         </form>
       </hlm-dialog-content>
     </hlm-dialog>
