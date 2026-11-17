@@ -3,22 +3,15 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideArrowDown, lucideArrowUp, lucideArrowUpDown, lucideSearch, lucideTrash2 } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
-import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmTableImports } from '@spartan-ng/helm/table';
 import {
-  type ColumnFiltersState,
   type SortingState,
-  columnFilteringFeature,
   createColumnHelper,
-  createFilteredRowModel,
   createSortedRowModel,
-  filterFn_equals,
-  filterFn_includesString,
-  globalFilteringFeature,
   injectTable,
   rowSortingFeature,
   sortFn_alphanumeric,
@@ -35,38 +28,31 @@ interface Row {
   added?: string;
   id: string;
   month: number;
-  categoryId: string;
   category: string;
   kind: string;
+  /** Item and note aren't shown as columns but are still searchable. */
   item: string;
   note: string;
   amount: number;
 }
 
-// TanStack Table v9: register only the features we use.
+// TanStack Table v9: only sorting is needed; search and the month filter narrow the rows before the table.
 const features = tableFeatures({
   rowSortingFeature,
   sortedRowModel: createSortedRowModel(),
   sortFns: { alphanumeric: sortFn_alphanumeric, basic: sortFn_basic },
-  columnFilteringFeature,
-  globalFilteringFeature,
-  filteredRowModel: createFilteredRowModel(),
-  filterFns: { includesString: filterFn_includesString, equals: filterFn_equals },
 });
 const col = createColumnHelper<typeof features, Row>();
 const columns = col.columns([
-  col.accessor('added', { header: 'Added', sortFn: 'basic', sortUndefined: 'last', enableGlobalFilter: false }),
+  col.accessor('added', { header: 'Added', sortFn: 'basic', sortUndefined: 'last' }),
   col.accessor('category', { header: 'Category', sortFn: 'alphanumeric' }),
-  col.accessor('amount', { header: 'Amount', sortFn: 'basic', enableGlobalFilter: false }),
-  col.accessor('month', { header: 'Month', sortFn: 'basic', filterFn: 'equals', enableGlobalFilter: false }),
-  col.accessor('item', { header: 'Item', sortFn: 'alphanumeric' }),
-  col.accessor('note', { header: 'Note', sortFn: 'alphanumeric' }),
+  col.accessor('amount', { header: 'Amount', sortFn: 'basic' }),
 ]);
 
 /** Every amount of the year in one searchable, sortable list. */
 @Component({
   selector: 'app-entries',
-  imports: [DatePipe, DecimalPipe, NgIcon, HlmBadgeImports, HlmButtonImports, HlmCardImports, HlmInputImports, HlmNativeSelectImports, HlmTableImports],
+  imports: [DatePipe, DecimalPipe, NgIcon, HlmButtonImports, HlmCardImports, HlmInputImports, HlmNativeSelectImports, HlmTableImports],
   providers: [provideIcons({ lucideArrowDown, lucideArrowUp, lucideArrowUpDown, lucideSearch, lucideTrash2 })],
   template: `
     <div class="grid gap-4">
@@ -75,14 +61,14 @@ const columns = col.columns([
       <div class="flex flex-wrap items-center gap-2">
         <div class="relative min-w-48 flex-1">
           <ng-icon name="lucideSearch" class="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground" />
-          <input hlmInput type="search" class="w-full pl-8" placeholder="Search category, item or note…"
+          <input hlmInput type="search" class="w-full pl-8" placeholder="Search category, trip or note…"
                  [value]="search()" (input)="search.set($any($event.target).value)" />
         </div>
-        <hlm-native-select class="w-36" [value]="monthFilter()" (change)="setMonth($any($event.target).value)">
+        <hlm-native-select class="w-36" [value]="monthFilter()" (change)="monthFilter.set($any($event.target).value)">
           <option hlmNativeSelectOption value="">All months</option>
-          @for (m of months; track m) { <option hlmNativeSelectOption [value]="m">{{ monthShort[m - 1] }}</option> }
+          @for (m of months; track m) { <option hlmNativeSelectOption [value]="'' + m">{{ monthShort[m - 1] }}</option> }
         </hlm-native-select>
-        <span class="text-sm text-muted-foreground">{{ table.getRowModel().rows.length }} entries · <span class="sensitive">{{ shownTotal() | number: '1.2-2' }}</span></span>
+        <span class="text-sm text-muted-foreground">{{ filtered().length }} entries · <span class="sensitive">{{ shownTotal() | number: '1.2-2' }}</span></span>
       </div>
 
       <section hlmCard class="py-0">
@@ -113,15 +99,12 @@ const columns = col.columns([
                   <td hlmTd class="text-right tabular-nums">
                     <span [class]="row.original.kind === 'income' ? 'text-green-500' : ''">{{ row.original.amount | number: '1.2-2' }}</span>
                   </td>
-                  <td hlmTd class="text-muted-foreground">{{ monthShort[row.original.month - 1] }}</td>
-                  <td hlmTd>@if (row.original.item) { <span hlmBadge variant="secondary">{{ row.original.item }}</span> }</td>
-                  <td hlmTd class="max-w-64 truncate text-muted-foreground">{{ row.original.note }}</td>
-                  <td hlmTd>
+                  <td hlmTd class="w-10">
                     <button hlmBtn variant="ghost" size="icon-sm" aria-label="Delete" (click)="remove(row.original)"><ng-icon name="lucideTrash2" /></button>
                   </td>
                 </tr>
               } @empty {
-                <tr hlmTr><td hlmTd colspan="7" class="h-24 text-center text-muted-foreground">No entries.</td></tr>
+                <tr hlmTr><td hlmTd colspan="4" class="h-24 text-center text-muted-foreground">No entries.</td></tr>
               }
             </tbody>
           </table>
@@ -138,8 +121,7 @@ export class Entries {
 
   protected readonly search = signal('');
   protected readonly monthFilter = signal('');
-  private readonly sorting = signal<SortingState>([{ id: 'added', desc: true }]) // most recent first;
-  private readonly columnFilters = signal<ColumnFiltersState>([]);
+  private readonly sorting = signal<SortingState>([{ id: 'added', desc: true }]); // most recent first
 
   private readonly rows = computed<Row[]>(() => {
     const d = this.store.data();
@@ -151,7 +133,6 @@ export class Entries {
       [...(d.months[m] ?? [])].reverse().map((e) => ({
         id: e.id,
         month: m,
-        categoryId: e.categoryId,
         category: cats.get(e.categoryId)?.name ?? '?',
         kind: cats.get(e.categoryId)?.kind ?? 'expense',
         item: e.itemId ? (items.get(e.itemId) ?? '') : '',
@@ -162,29 +143,28 @@ export class Entries {
     );
   });
 
+  /** Month filter + search (category, trip/item name or note). */
+  protected readonly filtered = computed(() => {
+    const month = Number(this.monthFilter()) || 0;
+    const q = this.search().trim().toLowerCase();
+    return this.rows().filter(
+      (r) => (!month || r.month === month) && (!q || `${r.category} ${r.item} ${r.note}`.toLowerCase().includes(q)),
+    );
+  });
+
   protected readonly table = injectTable(() => ({
     features,
     columns,
-    data: this.rows(),
+    data: this.filtered(),
     getRowId: (r: Row) => r.id,
-    globalFilterFn: 'includesString' as const,
-    state: { sorting: this.sorting(), globalFilter: this.search(), columnFilters: this.columnFilters() },
+    state: { sorting: this.sorting() },
     onSortingChange: (u) => (typeof u === 'function' ? this.sorting.update(u) : this.sorting.set(u)),
-    onColumnFiltersChange: (u) => (typeof u === 'function' ? this.columnFilters.update(u) : this.columnFilters.set(u)),
-    onGlobalFilterChange: (u) => this.search.set(typeof u === 'function' ? u(this.search()) : u),
   }));
 
-  protected readonly shownTotal = computed(() => {
-    this.search();
-    this.columnFilters();
-    this.rows();
-    return this.table.getRowModel().rows.reduce((s, r) => s + (r.original.kind === 'income' ? 0 : r.original.amount), 0);
-  });
-
-  protected setMonth(v: string) {
-    this.monthFilter.set(v);
-    this.columnFilters.set(v ? [{ id: 'month', value: Number(v) }] : []);
-  }
+  /** Sum of the listed expenses (income excluded). */
+  protected readonly shownTotal = computed(() =>
+    this.filtered().reduce((s, r) => s + (r.kind === 'income' ? 0 : r.amount), 0),
+  );
 
   protected sortIcon(dir: false | 'asc' | 'desc') {
     return dir === 'asc' ? 'lucideArrowUp' : dir === 'desc' ? 'lucideArrowDown' : 'lucideArrowUpDown';
