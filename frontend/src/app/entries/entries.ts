@@ -56,11 +56,11 @@ const features = tableFeatures({
 const col = createColumnHelper<typeof features, Row>();
 const columns = col.columns([
   col.accessor('added', { header: 'Added', sortFn: 'basic', sortUndefined: 'last', enableGlobalFilter: false }),
-  col.accessor('month', { header: 'Month', sortFn: 'basic', filterFn: 'equals', enableGlobalFilter: false }),
   col.accessor('category', { header: 'Category', sortFn: 'alphanumeric' }),
+  col.accessor('amount', { header: 'Amount', sortFn: 'basic', enableGlobalFilter: false }),
+  col.accessor('month', { header: 'Month', sortFn: 'basic', filterFn: 'equals', enableGlobalFilter: false }),
   col.accessor('item', { header: 'Item', sortFn: 'alphanumeric' }),
   col.accessor('note', { header: 'Note', sortFn: 'alphanumeric' }),
-  col.accessor('amount', { header: 'Amount', sortFn: 'basic', enableGlobalFilter: false }),
 ]);
 
 /** Every amount of the year in one searchable, sortable list. */
@@ -106,14 +106,16 @@ const columns = col.columns([
             <tbody hlmTBody>
               @for (row of table.getRowModel().rows; track row.id) {
                 <tr hlmTr>
-                  <td hlmTd class="whitespace-nowrap text-muted-foreground">{{ row.original.added ? (row.original.added | date: 'd MMM y, HH:mm') : '—' }}</td>
-                  <td hlmTd class="text-muted-foreground">{{ monthShort[row.original.month - 1] }}</td>
+                  <td hlmTd class="whitespace-nowrap text-muted-foreground" [title]="row.original.added ? (row.original.added | date: 'd MMM y, HH:mm') : 'Imported (no time recorded)'">
+                    {{ row.original.added ? (row.original.added | date: 'dd/MM HH:mm') : '—' }}
+                  </td>
                   <td hlmTd>{{ row.original.category }}</td>
-                  <td hlmTd>@if (row.original.item) { <span hlmBadge variant="secondary">{{ row.original.item }}</span> }</td>
-                  <td hlmTd class="max-w-64 truncate text-muted-foreground">{{ row.original.note }}</td>
                   <td hlmTd class="text-right tabular-nums">
                     <span [class]="row.original.kind === 'income' ? 'text-green-500' : ''">{{ row.original.amount | number: '1.2-2' }}</span>
                   </td>
+                  <td hlmTd class="text-muted-foreground">{{ monthShort[row.original.month - 1] }}</td>
+                  <td hlmTd>@if (row.original.item) { <span hlmBadge variant="secondary">{{ row.original.item }}</span> }</td>
+                  <td hlmTd class="max-w-64 truncate text-muted-foreground">{{ row.original.note }}</td>
                   <td hlmTd>
                     <button hlmBtn variant="ghost" size="icon-sm" aria-label="Delete" (click)="remove(row.original)"><ng-icon name="lucideTrash2" /></button>
                   </td>
